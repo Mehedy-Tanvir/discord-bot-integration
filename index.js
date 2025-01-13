@@ -13,7 +13,9 @@ app.use(express.json());
 const discordBotToken = process.env.DISCORD_BOT_CLIENT_TOKEN;
 const clientId = process.env.CLIENT_ID;
 const clientSecret = process.env.CLIENT_SECRET;
-const redirectUri = "http://localhost:3000/auth/discord/redirect";
+// const redirectUri = "http://localhost:3000/auth/discord/redirect";
+const redirectUri =
+  "https://b14c-103-153-48-244.ngrok-free.app/auth/discord/redirect";
 
 const botClient = new Client({
   intents: [
@@ -30,6 +32,11 @@ const userTokens = {};
 const authUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
   redirectUri
 )}&response_type=code&scope=identify+bot&permissions=8`;
+
+// API to get the OAuth2 URL
+app.get("/", (req, res) => {
+  res.send("Discord bot server running!");
+});
 
 // API to get the OAuth2 URL
 app.get("/api/discord/oauth-url", (req, res) => {
@@ -277,6 +284,77 @@ botClient.on("messageCreate", async (message) => {
   }
 
   message.reply("Hi from bot");
+});
+
+// botClient.on("ready", async () => {
+//   console.log(`Logged in as ${client.user.tag}!`);
+
+//   // Iterate over all guilds the bot is part of
+//   botClient.guilds.cache.forEach(async (guild) => {
+//     console.log(`Guild Name: ${guild.name} (ID: ${guild.id})`);
+
+//     try {
+//       // Fetch all channels in the guild
+//       const channels = await guild.channels.fetch();
+
+//       // Log channel details
+//       channels.forEach((channel) => {
+//         console.log(`- Channel Name: ${channel.name} (ID: ${channel.id})`);
+//       });
+//     } catch (error) {
+//       console.error(`Failed to fetch channels for guild ${guild.name}:`, error);
+//     }
+//   });
+// });
+
+// API endpoint to send a message
+app.post("/send-message", async (req, res) => {
+  const { channelId, content } = req.body;
+
+  //   botClient.guilds.cache.forEach(async (guild) => {
+  //     console.log(`Guild Name: ${guild.name} (ID: ${guild.id})`);
+
+  //     try {
+  //       // Fetch all channels in the guild
+  //       const channels = await guild.channels.fetch();
+
+  //       // Log channel details
+  //       channels.forEach((channel) => {
+  //         console.log(`- Channel Name: ${channel.name} (ID: ${channel.id})`);
+  //       });
+  //     } catch (error) {
+  //       console.error(`Failed to fetch channels for guild ${guild.name}:`, error);
+  //     }
+  //   });
+
+  if (!channelId || !content) {
+    return res.status(400).json({
+      error: "Both channelId and content are required.",
+    });
+  }
+
+  try {
+    // Fetch the channel
+    const channel = await botClient.channels.fetch(channelId);
+
+    if (!channel || !channel.isTextBased()) {
+      return res.status(404).json({
+        error: "Channel not found or is not text-based.",
+      });
+    }
+
+    // Send the message
+    await channel.send(content);
+    return res.status(200).json({
+      message: "Message sent successfully!",
+    });
+  } catch (error) {
+    console.error("Error sending message:", error.message);
+    return res.status(500).json({
+      error: "Failed to send the message.",
+      details: error.message,
+    });
+  }
 });
 
 // Start Bot Client
